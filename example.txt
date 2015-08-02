@@ -1,0 +1,4 @@
+google.com
+wiki.gentoo.org
+pokemon.com	15
+projecteuler.net	32

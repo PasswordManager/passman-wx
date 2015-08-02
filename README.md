@@ -10,6 +10,18 @@ must be entered each time a password is generated. To change the master
 password, delete ~/.passman-masterpasswd but note that generated passwords will
 now be different.
 
+To generate a password, passman will prompt for the master password
+
+![enter-password](https://raw.githubusercontent.com/mat8913/passman/storage/enter-password.png)
+
+The generated password will then be stored in clipboard. Clicking "OK" on the
+next dialog will clear the clipboard.
+
+![OK](https://raw.githubusercontent.com/mat8913/passman/storage/ok.png)
+
 ## file format
 Separate strings with newlines. If the password needs to be shorter than 128
-characters, add the length to the end of the line separated by a tab.
+characters, add the length to the end of the line separated by a tab. An example
+is provided as example.txt:
+
+![main-screen](https://raw.githubusercontent.com/mat8913/passman/storage/main-screen.png)
