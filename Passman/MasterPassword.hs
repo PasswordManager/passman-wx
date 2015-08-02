@@ -1,14 +1,13 @@
 module Passman.MasterPassword (getMasterPassword) where
 
 import Passman.Hash (generateTestPassword)
+import Passman.Util (strip)
 
 import System.Directory (getHomeDirectory)
 import Control.Monad.List (guard)
 import Control.Exception (tryJust)
 import System.IO (IOMode(WriteMode), hPutStr, openFile, hClose)
 import System.IO.Error (isDoesNotExistError)
-import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
 
 getMasterPassword :: IO String -> IO String
 getMasterPassword askPass = do
@@ -24,6 +23,3 @@ getMasterPassword askPass = do
             hPutStr out passwd'
             hClose out
             return passwd'
-
-strip :: String -> String
-strip = dropWhileEnd isSpace . dropWhile isSpace
