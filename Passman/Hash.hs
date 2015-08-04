@@ -8,8 +8,7 @@ import Crypto.Hash (hmacGetDigest, hmac, HMAC, SHA512)
 import qualified Data.ByteString.Char8 as C
 
 shorten :: Maybe Int -> String -> String
-shorten (Just n) = take n
-shorten _        = id
+shorten = flip $ foldr take
 
 generatePassword :: PassListEntry -> String -> String
 generatePassword (PassListEntry i l) p = shorten l $ show $ hmacGetDigest h
