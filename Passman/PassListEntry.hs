@@ -13,7 +13,7 @@ import Control.Applicative (Alternative, empty, (<$>))
 data PassListEntry = PassListEntry String (Maybe Int)
 
 instance Show PassListEntry where
-    show (PassListEntry i l) = i ++ (fromMaybe "" $ ('\t':) <$> show <$> l)
+    show (PassListEntry i l) = i ++ fromMaybe "" (('\t':) <$> show <$> l)
 
 stringToEntry :: String -> PassListEntry
 stringToEntry = tupleToEntry . trim . break ('\t'==)
