@@ -10,6 +10,7 @@ import qualified Data.ByteString.Char8 as C
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd, findIndex)
 import Data.Maybe (fromJust)
+import Numeric.Natural (Natural)
 
 strip :: String -> String
 strip = dropWhileEnd isSpace . dropWhile isSpace
@@ -32,14 +33,16 @@ bytesToInt = helper . C.reverse
         Nothing -> 0
         Just (c,cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
 
-toBase :: Integer -> Integer -> [Integer]
+toBase :: Natural -> Natural -> [Natural]
+toBase 0 _ = error "Base 0"
+toBase 1 _ = error "Base 1"
 toBase b k = helper (digitsInBase b k) b k
   where
-    helper :: Integer -> Integer -> Integer -> [Integer]
+    helper :: Natural -> Natural -> Natural -> [Natural]
     helper 0 _ k = [k]
     helper n b k = d:helper (n-1) b m
       where
         (d,m) = divMod k (b^n)
 
-digitsInBase :: Integer -> Integer -> Integer
+digitsInBase :: Natural -> Natural -> Natural
 digitsInBase b k = fromIntegral $ fromJust $ findIndex (>k) [b^n | n <- [1..]]
