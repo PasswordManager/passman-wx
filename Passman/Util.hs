@@ -2,6 +2,7 @@ module Passman.Util
 ( strip
 , fileMap
 , safeRead
+, fromBase
 , toBase
 , bytesToInt
 ) where
@@ -32,6 +33,13 @@ bytesToInt = helper . C.reverse
     helper x = case C.uncons x of
         Nothing -> 0
         Just (c,cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
+
+fromBase :: Natural -> [Natural] -> Natural
+fromBase b = helper . reverse
+  where
+    helper :: [Natural] -> Natural
+    helper (k:ks) = k + b * helper ks
+    helper []     = 0
 
 toBase :: Natural -> Natural -> [Natural]
 toBase 0 _ = error "Base 0"
