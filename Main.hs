@@ -26,8 +26,9 @@ gui = do
     bGetPasswd <- button f [ text := "Get Password" ]
     b <- button f [ text := "Open File" ]
     l <- listCtrlEx f (wxLC_SINGLE_SEL .+. wxLC_REPORT)
-                                         [columns := [("Info", AlignLeft, 300)
+                                         [columns := [("Info", AlignLeft, 220)
                                                      ,("Length", AlignRight, -1)
+                                                     ,("Mode", AlignRight, -1)
                                          ]           ]
     lc <- ListView l <$> varCreate [] <*> pure entryToStrings
     mpass <- getMasterPassword (passwordDialog f "Please enter a master password:" "Please enter a master password." "")
@@ -80,7 +81,7 @@ loadFile :: ListView PassListEntry -> String -> IO ()
 loadFile lc filename = fileToEntries filename >>= listViewSetItems lc
 
 entryToStrings :: PassListEntry -> [String]
-entryToStrings (PassListEntry x y) = [x, fromMaybe "Max" $ show <$> y]
+entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, fromMaybe "D" $ show <$> z]
 
 lcEvent :: GUIContext -> EventList -> IO ()
 lcEvent GUICtx{guiSelItem = si} (ListItemSelected i) = varSet si i

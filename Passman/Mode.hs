@@ -3,6 +3,8 @@ module Passman.Mode
 , readMode
 , modeToInt
 , validModes
+, defaultMode
+, modeToConstraint
 ) where
 
 import Control.Monad (mfilter)
@@ -14,6 +16,10 @@ lower = ['a'..'z']
 upper = ['A'..'Z']
 numbers = ['0'..'9']
 symbols = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
+defaultMode :: Mode
+defaultMode = case readMode "ncl" of
+    Just x -> x
 
 newtype Mode = Mode {modeToInt :: Int} deriving Eq
 

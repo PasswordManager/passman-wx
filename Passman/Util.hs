@@ -26,10 +26,10 @@ safeRead = helper . reads
     helper [(x, "")] = Just x
     helper _         = Nothing
 
-bytesToInt :: C.ByteString -> Integer
+bytesToInt :: Integral a => C.ByteString -> a
 bytesToInt = helper . C.reverse
   where
-    helper :: C.ByteString -> Integer
+    helper :: Integral a => C.ByteString -> a
     helper x = case C.uncons x of
         Nothing -> 0
         Just (c,cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
