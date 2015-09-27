@@ -12,6 +12,12 @@ cabal-version:       >=1.10
 
 executable passman
   main-is:             Main.hs
+  other-modules:       Passman.Hash
+                       Passman.MasterPassword
+                       Passman.Mode
+                       Passman.PassListEntry
+                       Passman.Util
+
   build-depends:       base >= 4,
                        wx,
                        wxcore,
@@ -21,4 +27,5 @@ executable passman
                        mtl,
                        byteable,
                        regex-compat
-  default-language: Haskell2010
+
+  default-language:    Haskell2010
