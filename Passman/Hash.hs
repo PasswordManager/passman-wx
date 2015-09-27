@@ -8,10 +8,13 @@ import Passman.Util (toBase, bytesToInt)
 import Passman.Mode (defaultMode, modeToConstraint)
 
 import Crypto.Hash (hmacGetDigest, hmac, HMAC, SHA512)
-import Numeric.Natural (Natural)
+import Passman.Compat (Natural)
 import qualified Data.ByteString.Char8 as C
+import Prelude hiding (foldr)
+import Data.Foldable (foldr)
 import Data.Maybe (fromMaybe)
 import Data.Byteable (toBytes)
+import Control.Applicative ((<$>))
 
 shorten :: Maybe Int -> String -> String
 shorten = flip $ foldr take

@@ -17,6 +17,7 @@ executable passman
                        Passman.Mode
                        Passman.PassListEntry
                        Passman.Util
+                       Passman.Compat
 
   build-depends:       base >= 4,
                        wx,

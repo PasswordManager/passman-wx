@@ -11,7 +11,8 @@ import qualified Data.ByteString.Char8 as C
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd, findIndex)
 import Data.Maybe (fromJust)
-import Numeric.Natural (Natural)
+import Passman.Compat (Natural)
+import Control.Applicative ((<$>))
 
 strip :: String -> String
 strip = dropWhileEnd isSpace . dropWhile isSpace
