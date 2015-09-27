@@ -12,13 +12,13 @@ cabal-version:       >=1.10
 
 executable passman
   main-is:             Main.hs
-  build-depends:       base >=4.8 && <4.9,
-                       wx >=0.92 && <0.93,
-                       wxcore >=0.92 && <0.93,
-                       cryptohash >=0.11 && <0.12,
-                       bytestring >=0.10 && <0.11,
-                       directory >=1.2 && <1.3,
-                       mtl >=2.2 && <2.3,
+  build-depends:       base >= 4,
+                       wx,
+                       wxcore,
+                       cryptohash,
+                       bytestring,
+                       directory,
+                       mtl,
                        byteable,
                        regex-compat
   default-language: Haskell2010
