@@ -1,15 +1,15 @@
-module Passman.Test.Util (main) where
+module Passman.Test.Util (tests) where
 
-import Test.QuickCheck
+import Distribution.TestSuite.QuickCheck
 import Passman.Test.Test
 import Passman.Util
 
 import Numeric.Natural (Natural)
 
-main :: IO ()
-main = do
-  quickCheck prop_toBase10
-  quickCheck prop_toFromBase
+tests :: IO [Test]
+tests = return [ testProperty "prop_toBase10" prop_toBase10
+               , testProperty "prop_toFromBase" prop_toFromBase
+               ]
 
 prop_toBase10 :: Natural -> Bool
 prop_toBase10 k = map ((['0'..'9']!!) . fromEnum) (toBase 10 k) == show k

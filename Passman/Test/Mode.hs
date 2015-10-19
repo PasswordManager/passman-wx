@@ -1,10 +1,11 @@
-module Passman.Test.Mode (main) where
+module Passman.Test.Mode (tests) where
 
-import Test.QuickCheck
+import Distribution.TestSuite.QuickCheck
 import Passman.Mode
 
-main :: IO ()
-main = quickCheck prop_showReadMode
+tests :: IO [Test]
+tests = return [ testProperty "prop_showReadMode" prop_showReadMode
+              ]
 
 prop_showReadMode :: Bool
 prop_showReadMode = all prop_showReadMode' validModes

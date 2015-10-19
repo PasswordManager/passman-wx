@@ -12,6 +12,7 @@ cabal-version:       >=1.10
 
 executable passman
   main-is:             Main.hs
+
   other-modules:       Passman.Hash
                        Passman.MasterPassword
                        Passman.Mode
@@ -29,5 +30,38 @@ executable passman
                        byteable,
                        regex-compat,
                        haskell-bcrypt
+
+  default-language:    Haskell2010
+
+
+test-suite test-util
+  type:                detailed-0.9
+
+  test-module:         Passman.Test.Util
+
+  other-modules:       Passman.Util
+                       Passman.Test.Test
+
+  build-depends:       base >= 4,
+                       QuickCheck,
+                       bytestring,
+                       cabal-test-quickcheck,
+                       Cabal
+
+  default-language:    Haskell2010
+
+
+test-suite test-mode
+  type:                detailed-0.9
+
+  test-module:         Passman.Test.Mode
+
+  other-modules:       Passman.Mode
+                       Passman.Test.Test
+
+  build-depends:       base >= 4,
+                       QuickCheck,
+                       cabal-test-quickcheck,
+                       Cabal
 
   default-language:    Haskell2010
