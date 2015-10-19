@@ -27,6 +27,7 @@ executable passman
                        directory,
                        mtl,
                        byteable,
-                       regex-compat
+                       regex-compat,
+                       haskell-bcrypt
 
   default-language:    Haskell2010

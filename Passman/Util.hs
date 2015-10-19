@@ -5,6 +5,7 @@ module Passman.Util
 , fromBase
 , toBase
 , bytesToInt
+, zeroPadL
 ) where
 
 import qualified Data.ByteString.Char8 as C
@@ -27,13 +28,13 @@ safeRead = helper . reads
     helper [(x, "")] = Just x
     helper _         = Nothing
 
-bytesToInt :: Integral a => C.ByteString -> a
-bytesToInt = helper . C.reverse
+bytesToInt :: Integral a => String -> a
+bytesToInt = helper . reverse
   where
-    helper :: Integral a => C.ByteString -> a
-    helper x = case C.uncons x of
-        Nothing -> 0
-        Just (c,cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
+    helper :: Integral a => String -> a
+    helper x = case x of
+        [] -> 0
+        (c:cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
 
 fromBase :: Natural -> [Natural] -> Natural
 fromBase b = helper . reverse
@@ -55,3 +56,6 @@ toBase b k = helper (digitsInBase b k) b k
 
 digitsInBase :: Natural -> Natural -> Natural
 digitsInBase b k = fromIntegral $ fromJust $ findIndex (>k) [b^n | n <- [1..]]
+
+zeroPadL :: Int -> [Natural] -> [Natural]
+zeroPadL l xs = replicate (l - length xs) 0 ++ xs
