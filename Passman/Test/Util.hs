@@ -4,7 +4,7 @@ import Distribution.TestSuite.QuickCheck
 import Passman.Test.Test
 import Passman.Util
 
-import Numeric.Natural (Natural)
+import Passman.Compat (Natural)
 
 tests :: IO [Test]
 tests = return [ testProperty "prop_toBase10" prop_toBase10
