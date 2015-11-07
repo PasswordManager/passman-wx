@@ -1,3 +1,6 @@
 language: haskell
 ghc: 7.8
 sudo: false
+install:
+  - cd haskell-bcrypt && cabal install && cd ..
+  - cabal install --only-dependencies --enable-tests
