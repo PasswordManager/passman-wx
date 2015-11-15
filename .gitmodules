@@ -1,3 +1,0 @@
-[submodule "haskell-bcrypt"]
-	path = haskell-bcrypt
-	url = https://github.com/mat8913/haskell-bcrypt
