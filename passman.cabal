@@ -19,6 +19,7 @@ executable passman
                        Passman.PassListEntry
                        Passman.Util
                        Passman.Compat
+                       Passman.BFEncoding
 
   build-depends:       base >= 4,
                        wx,
