@@ -8,6 +8,7 @@ module Passman.Util
 , zeroPadL
 ) where
 
+import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as C
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd, findIndex)
@@ -28,13 +29,13 @@ safeRead = helper . reads
     helper [(x, "")] = Just x
     helper _         = Nothing
 
-bytesToInt :: Integral a => String -> a
-bytesToInt = helper . reverse
+bytesToInt :: Integral a => ByteString -> a
+bytesToInt = helper . C.reverse
   where
-    helper :: Integral a => String -> a
-    helper x = case x of
-        [] -> 0
-        (c:cs)  -> fromIntegral (fromEnum c) + 256 * helper cs
+    helper :: Integral a => ByteString -> a
+    helper x = case C.uncons x of
+        Nothing -> 0
+        Just (c,cs) -> fromIntegral (fromEnum c) + 256 * helper cs
 
 fromBase :: Natural -> [Natural] -> Natural
 fromBase b = helper . reverse
