@@ -6,5 +6,4 @@ install:
   - sudo add-apt-repository 'deb http://repos.codelite.org/wx3.0.2/ubuntu/ precise universe'
   - sudo apt-get update -qq
   - sudo apt-get install -y libwxgtk3.0-dev
-  - cd haskell-bcrypt && cabal install && cd ..
   - cabal install --only-dependencies --enable-tests
