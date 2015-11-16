@@ -4,13 +4,14 @@ module Passman.PassListEntry
 , fileToEntries
 ) where
 
-import Passman.Util (strip, fileMap, safeRead)
+import Passman.Util (strip, fileMap)
 import Passman.Mode (Mode, readMode)
 
 import Data.Maybe (fromMaybe)
 import Control.Monad (mfilter)
 import Control.Applicative (Alternative, empty, (<$>))
 import Text.Regex (mkRegex, splitRegex)
+import Safe (readMay)
 
 data PassListEntry = PassListEntry String (Maybe Int) (Maybe Mode)
 
@@ -21,7 +22,7 @@ instance Show PassListEntry where
         modeStr   = fromMaybe "D"   (show <$> m)
 
 readLength :: String -> Maybe Int
-readLength = mfilter (>0) . safeRead
+readLength = mfilter (>0) . readMay
 
 stringToEntry :: String -> PassListEntry
 stringToEntry = helper . map strip . splitRegex (mkRegex "\t")

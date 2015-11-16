@@ -2,11 +2,14 @@ module Main (main) where
 
 import Passman.PassListEntry (PassListEntry(..), fileToEntries)
 import Passman.Hash (generatePassword, generateTestPassword)
-import Passman.MasterPassword (getMasterPassword)
+import Passman.Config
 
 import Data.Maybe (fromMaybe)
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Monad (unless)
+import Control.Monad.Trans (liftIO)
+import Control.Monad.Trans.Maybe (runMaybeT, MaybeT(..))
+import System.FilePath (splitFileName)
 
 import Graphics.UI.WX
 import Graphics.UI.WXCore
@@ -16,7 +19,7 @@ main = start gui
 
 data GUIContext = GUICtx { guiWin        :: Frame ()
                          , guiListView   :: ListView PassListEntry
-                         , guiMasterPass :: String
+                         , guiConfig     :: Var Config
                          , guiSelItem    :: Var Int
                          }
 
@@ -31,8 +34,8 @@ gui = do
                                                      ,("Mode", AlignRight, -1)
                                          ]           ]
     lc <- ListView l <$> varCreate [] <*> pure entryToStrings
-    mpass <- getMasterPassword (passwordDialog f "Please enter a master password:" "Please enter a master password." "")
-    ctx <- GUICtx f lc mpass <$> varCreate (-1)
+    config <- configVar f
+    ctx <- GUICtx f lc config <$> varCreate (-1)
     listViewSetHandler lc (lcEvent ctx)
     set f [ on activate := flip when (windowReLayout f) ]
     set b [ on command := openFile ctx]
@@ -45,8 +48,10 @@ gui = do
 
 
 getPasswd :: GUIContext -> IO ()
-getPasswd ctx@GUICtx{guiWin = win, guiListView = lc, guiMasterPass = mpass, guiSelItem = si} = do
+getPasswd ctx@GUICtx{guiWin = win, guiListView = lc, guiConfig = config, guiSelItem = si} = do
     si' <- varGet si
+    config' <- varGet config
+    let mpass = masterPassword config'
     if si' < 0 then
         errorDialog win "No item selected" "No item selected"
     else do
@@ -67,21 +72,52 @@ setClipboardText text = clipboardCreate >>= flip execClipBoardData helper
     helper cl = textDataObjectCreate text >>= clipboardSetData cl >> return ()
 
 openFile :: GUIContext -> IO ()
-openFile GUICtx{guiWin = win, guiListView = lc} = helper =<< maybePath
+openFile ctx = helper =<< passListDialog ctx
   where
-    maybePath :: IO (Maybe FilePath)
-    maybePath = fileOpenDialog win True True "Open file..."
-                                            [("Text Files (*.txt)", ["*.txt"])
-                                            ,("All Files (*.*)",["*.*"])] "" ""
     helper :: Maybe FilePath -> IO ()
     helper Nothing = return ()
-    helper (Just path) = loadFile lc path
+    helper (Just path) = loadFile (guiListView ctx) path
+
+passListDialog :: GUIContext -> IO (Maybe FilePath)
+passListDialog ctx = runMaybeT $ do
+    config <- liftIO $ varGet $ guiConfig ctx
+    let (p1,p2) = splitPassListPath $ passList config
+    path <- MaybeT $ fileOpenDialog (guiWin ctx) True True "Open file..."
+                                            [("Text Files (*.txt)", ["*.txt"])
+                                            ,("All Files (*.*)",["*"])] p1 p2
+    liftIO $ updateConfig (guiConfig ctx) (updatePassList path)
+    return path
+
+updateConfig :: Var Config -> (Config -> Config) -> IO ()
+updateConfig vc f = varUpdate vc f >> varGet vc >>= saveConfig
+
+splitPassListPath :: Maybe FilePath -> (String,String)
+splitPassListPath = maybe ("","") splitFileName
 
 loadFile :: ListView PassListEntry -> String -> IO ()
 loadFile lc filename = fileToEntries filename >>= listViewSetItems lc
 
 entryToStrings :: PassListEntry -> [String]
 entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, fromMaybe "D" $ show <$> z]
+
+configVar :: Frame () -> IO (Var Config)
+configVar f = do
+    c <- loadConfig
+    case c of
+        Right config -> varCreate config
+        Left ConfigFileNotFound -> do
+            mpass <- passwordDialog f "Please enter a master password:" "Please enter a master password." ""
+            let mpass' = generateTestPassword mpass
+                config = defaultConfig mpass'
+            saveConfig config
+            varCreate config
+        Left (InvalidConfig fp) ->
+            crashWithError f $ "Invalid config file. Please delete " ++ fp
+
+crashWithError :: Frame () -> String -> IO a
+crashWithError f m = do
+    errorDialog f "Error" m
+    error m
 
 lcEvent :: GUIContext -> EventList -> IO ()
 lcEvent GUICtx{guiSelItem = si} (ListItemSelected i) = varSet si i
