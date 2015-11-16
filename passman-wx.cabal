@@ -1,0 +1,23 @@
+name:                passman-wx
+version:             0.0.0.1
+license:             GPL-2
+license-file:        LICENSE
+author:              Matthew Bekkema
+maintainer:          mbekkema97@gmail.com
+
+build-type:          Simple
+cabal-version:       >=1.10
+
+
+executable passman
+  main-is:             Main.hs
+
+  build-depends:       base >= 4 && < 5
+                     , passman-core == 0.0.0.1
+                     , wxcore
+                     , wx
+                     , filepath
+                     , transformers
+                     , mtl
+
+  default-language:    Haskell2010

@@ -1,4 +1,0 @@
-google.com
-wiki.gentoo.org	Max	n
-pokemon.com	15
-projecteuler.net	32

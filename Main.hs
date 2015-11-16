@@ -1,8 +1,8 @@
 module Main (main) where
 
-import Passman.PassListEntry (PassListEntry(..), fileToEntries)
-import Passman.Hash (generatePassword, generateTestPassword)
-import Passman.Config
+import Passman.Core.PassListEntry (PassListEntry(..), fileToEntries)
+import Passman.Core.Hash (generatePassword, generateTestPassword)
+import Passman.Core.Config
 
 import Data.Maybe (fromMaybe)
 import Control.Applicative (pure, (<$>), (<*>))
