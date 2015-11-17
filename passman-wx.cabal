@@ -9,7 +9,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 
-executable passman
+executable passman-wx
   main-is:             Main.hs
 
   build-depends:       base         == 4.*
