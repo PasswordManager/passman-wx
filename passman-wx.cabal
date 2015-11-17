@@ -1,5 +1,5 @@
 name:                passman-wx
-version:             0.0.0.1
+version:             0
 license:             GPL-2
 license-file:        LICENSE
 author:              Matthew Bekkema
@@ -12,8 +12,8 @@ cabal-version:       >=1.10
 executable passman
   main-is:             Main.hs
 
-  build-depends:       base >= 4 && < 5
-                     , passman-core == 0.0.0.1
+  build-depends:       base         == 4.*
+                     , passman-core == 0.1.0.*
                      , wxcore
                      , wx
                      , filepath

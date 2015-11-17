@@ -1,7 +1,7 @@
 module Main (main) where
 
-import Passman.Core.PassListEntry (PassListEntry(..), fileToEntries)
-import Passman.Core.Hash (generatePassword, generateTestPassword)
+import Passman.Core.PassListEntry
+import Passman.Core.Hash
 import Passman.Core.Config
 
 import Data.Maybe (fromMaybe)
@@ -51,12 +51,12 @@ getPasswd :: GUIContext -> IO ()
 getPasswd ctx@GUICtx{guiWin = win, guiListView = lc, guiConfig = config, guiSelItem = si} = do
     si' <- varGet si
     config' <- varGet config
-    let mpass = masterPassword config'
+    let hash = masterPasswordHash config'
     if si' < 0 then
         errorDialog win "No item selected" "No item selected"
     else do
         passwd <- passwordDialog win "Please enter your password:" "Please enter your password." ""
-        unless (null passwd) $ if generateTestPassword passwd == mpass then do
+        unless (null passwd) $ if checkMasterPassword hash passwd then do
             entries <- varGet $ listViewItems lc
             setClipboardText $ generatePassword (entries !! si') passwd
             infoDialog win "Press OK when done" "Press OK when done"
@@ -107,8 +107,8 @@ configVar f = do
         Right config -> varCreate config
         Left ConfigFileNotFound -> do
             mpass <- passwordDialog f "Please enter a master password:" "Please enter a master password." ""
-            let mpass' = generateTestPassword mpass
-                config = defaultConfig mpass'
+            hash <- hashMasterPassword mpass
+            let config = defaultConfig hash
             saveConfig config
             varCreate config
         Left (InvalidConfig fp) ->
