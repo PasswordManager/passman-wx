@@ -76,7 +76,9 @@ openFile ctx = helper =<< passListDialog ctx
   where
     helper :: Maybe FilePath -> IO ()
     helper Nothing = return ()
-    helper (Just path) = loadFile (guiListView ctx) path
+    helper (Just path) = loadFile (guiListView ctx) path >>= errHandler
+    errHandler Nothing = return ()
+    errHandler (Just err) = errorDialog (guiWin ctx) "Error" err >> openFile ctx
 
 passListDialog :: GUIContext -> IO (Maybe FilePath)
 passListDialog ctx = runMaybeT $ do
@@ -94,11 +96,14 @@ updateConfig vc f = varUpdate vc f >> varGet vc >>= saveConfig
 splitPassListPath :: Maybe FilePath -> (String,String)
 splitPassListPath = maybe ("","") splitFileName
 
-loadFile :: ListView PassListEntry -> String -> IO ()
-loadFile lc filename = fileToEntries filename >>= listViewSetItems lc
+loadFile :: ListView PassListEntry -> String -> IO (Maybe String)
+loadFile lc filename = fileToEntries filename >>= errHandler
+  where
+    errHandler (Right entries) = listViewSetItems lc entries >> return Nothing
+    errHandler (Left err) = return $ Just $ show err
 
 entryToStrings :: PassListEntry -> [String]
-entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, fromMaybe "D" $ show <$> z]
+entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, show z]
 
 configVar :: Frame () -> IO (Var Config)
 configVar f = do
