@@ -87,7 +87,7 @@ passListDialog ctx = runMaybeT $ do
     path <- MaybeT $ fileOpenDialog (guiWin ctx) True True "Open file..."
                                             [("Text Files (*.txt)", ["*.txt"])
                                             ,("All Files (*.*)",["*"])] p1 p2
-    liftIO $ updateConfig (guiConfig ctx) (updatePassList path)
+    liftIO $ updateConfig (guiConfig ctx) (\c -> c {passList = Just path})
     return path
 
 updateConfig :: Var Config -> (Config -> Config) -> IO ()
