@@ -1,8 +1,9 @@
 module Main (main) where
 
-import Passman.Core.PassListEntry
+import Passman.Core.PassList
 import Passman.Core.Hash
 import Passman.Core.Config
+import qualified Passman.Core.Config.Optional as OC
 
 import Data.Maybe (fromMaybe)
 import Control.Applicative (pure, (<$>), (<*>))
@@ -14,56 +15,90 @@ import System.FilePath (splitFileName)
 import Graphics.UI.WX
 import Graphics.UI.WXCore
 
+data GUI = GUI { gWin          :: Frame ()
+               , gListView     :: ListView PassListEntry
+               , gGetPassword  :: Button ()
+               , gOpenFile     :: Button ()
+               , gConfig       :: Var Config
+               , gSelectedItem :: Var Int
+               }
+
+-- Main block
+
 main :: IO ()
-main = start gui
+main = start (initGui >>= runGui)
 
-data GUIContext = GUICtx { guiWin        :: Frame ()
-                         , guiListView   :: ListView PassListEntry
-                         , guiConfig     :: Var Config
-                         , guiSelItem    :: Var Int
-                         }
+initGui :: IO GUI
+initGui = do
+    gWin'          <- frame [ text := "Passman" ]
+    gListView'     <- ListView <$> listCtrlEx gWin'
+        (wxLC_SINGLE_SEL .+. wxLC_REPORT)
+        [ columns := [ ("Info", AlignLeft, 220)
+                     , ("Length", AlignRight, -1)
+                     , ("Mode", AlignRight, -1)
+        ]            ] <*> varCreate [] <*> pure entryToStrings
+    gGetPassword'  <- button gWin' [ text := "Get Password" ]
+    gOpenFile'     <- button gWin' [ text := "Open File" ]
+    gConfig'       <- varCreate =<< initConfig gWin'
+    gSelectedItem' <- varCreate (-1)
+    return GUI
+        {   gWin          = gWin'
+        ,   gListView     = gListView'
+        ,   gGetPassword  = gGetPassword'
+        ,   gOpenFile     = gOpenFile'
+        ,   gConfig       = gConfig'
+        ,   gSelectedItem = gSelectedItem'
+        }
 
-gui :: IO ()
-gui = do
-    f <- frame [ text := "Passman" ]
-    bGetPasswd <- button f [ text := "Get Password" ]
-    b <- button f [ text := "Open File" ]
-    l <- listCtrlEx f (wxLC_SINGLE_SEL .+. wxLC_REPORT)
-                                         [columns := [("Info", AlignLeft, 220)
-                                                     ,("Length", AlignRight, -1)
-                                                     ,("Mode", AlignRight, -1)
-                                         ]           ]
-    lc <- ListView l <$> varCreate [] <*> pure entryToStrings
-    config <- configVar f
-    ctx <- GUICtx f lc config <$> varCreate (-1)
-    listViewSetHandler lc (lcEvent ctx)
-    set f [ on activate := flip when (windowReLayout f) ]
-    set b [ on command := openFile ctx]
-    set bGetPasswd [ on command := getPasswd ctx]
-    windowSetLayout f (column 5 [fill $ minsize (Size 400 100) $ widget $
-                                   listViewCtrl lc
-                                ,hfill $ widget bGetPasswd
-                                ,hfill $ widget b
+runGui :: GUI -> IO ()
+runGui g = do
+    set (gWin g) [ on activate := flip when (windowReLayout $ gWin g) ]
+    listViewSetHandler (gListView g) (lcEvent g)
+    set (gOpenFile g) [ on command := openFile g]
+    set (gGetPassword g) [ on command := getPassword g]
+    windowSetLayout (gWin g) (column 5 [fill $ minsize (Size 400 100) $ widget $
+                                   listViewCtrl (gListView g)
+                                ,hfill $ widget (gGetPassword g)
+                                ,hfill $ widget (gOpenFile g)
                                 ])
 
+-- Event handlers
 
-getPasswd :: GUIContext -> IO ()
-getPasswd ctx@GUICtx{guiWin = win, guiListView = lc, guiConfig = config, guiSelItem = si} = do
-    si' <- varGet si
-    config' <- varGet config
-    let hash = masterPasswordHash config'
-    if si' < 0 then
-        errorDialog win "No item selected" "No item selected"
+getPassword :: GUI -> IO ()
+getPassword g = do
+    let errorLoop = errorDialog (gWin g) "Incorrect password"
+                        "Incorrect password" >> getPassword g
+    selectedItem <- varGet $ gSelectedItem g
+    config <- varGet $ gConfig g
+    let hash = masterPasswordHash config
+    if selectedItem < 0 then
+        errorDialog (gWin g) "No item selected" "No item selected"
     else do
-        passwd <- passwordDialog win "Please enter your password:" "Please enter your password." ""
-        unless (null passwd) $ if checkMasterPassword hash passwd then do
-            entries <- varGet $ listViewItems lc
-            setClipboardText $ generatePassword (entries !! si') passwd
-            infoDialog win "Press OK when done" "Press OK when done"
-            setClipboardText ""
-        else do
-            errorDialog win "Incorrect password" "Incorrect password"
-            getPasswd ctx
+        passwd <- passwordDialog (gWin g) "Please enter your password:" "Please enter your password." ""
+        unless (null passwd) $ case masterPassword passwd of
+            Nothing    -> errorLoop
+            Just mpass -> if checkMasterPassword hash mpass then do
+                entries <- varGet $ listViewItems (gListView g)
+                setClipboardText $ generatePassword (entries !! selectedItem) mpass
+                infoDialog (gWin g) "Press OK when done" "Press OK when done"
+                setClipboardText ""
+            else errorLoop
+
+openFile :: GUI -> IO ()
+openFile g = helper =<< passListDialog g
+  where
+    helper :: Maybe FilePath -> IO ()
+    helper Nothing = return ()
+    helper (Just path) = loadFile (gListView g) path >>= errHandler
+    errHandler Nothing = return ()
+    errHandler (Just err) = errorDialog (gWin g) "Error" err >> openFile g
+
+lcEvent :: GUI -> EventList -> IO ()
+lcEvent g (ListItemSelected i) = varSet (gSelectedItem g) i
+lcEvent g ListDeleteAllItems = varSet (gSelectedItem g) (-1)
+lcEvent _ _ = return ()
+
+-- Helper Functions
 
 setClipboardText :: String -> IO ()
 setClipboardText text = clipboardCreate >>= flip execClipBoardData helper
@@ -71,24 +106,23 @@ setClipboardText text = clipboardCreate >>= flip execClipBoardData helper
     helper :: Clipboard () -> IO ()
     helper cl = textDataObjectCreate text >>= clipboardSetData cl >> return ()
 
-openFile :: GUIContext -> IO ()
-openFile ctx = helper =<< passListDialog ctx
-  where
-    helper :: Maybe FilePath -> IO ()
-    helper Nothing = return ()
-    helper (Just path) = loadFile (guiListView ctx) path >>= errHandler
-    errHandler Nothing = return ()
-    errHandler (Just err) = errorDialog (guiWin ctx) "Error" err >> openFile ctx
-
-passListDialog :: GUIContext -> IO (Maybe FilePath)
-passListDialog ctx = runMaybeT $ do
-    config <- liftIO $ varGet $ guiConfig ctx
-    let (p1,p2) = splitPassListPath $ passList config
-    path <- MaybeT $ fileOpenDialog (guiWin ctx) True True "Open file..."
+passListDialog :: GUI -> IO (Maybe FilePath)
+passListDialog g = runMaybeT $ do
+    config <- liftIO $ varGet $ gConfig g
+    let (p1,p2) = splitPassListPath $ getPassListPath config
+    path <- MaybeT $ fileOpenDialog (gWin g) True True "Open file..."
                                             [("Text Files (*.txt)", ["*.txt"])
                                             ,("All Files (*.*)",["*"])] p1 p2
-    liftIO $ updateConfig (guiConfig ctx) (\c -> c {passList = Just path})
+    liftIO $ updateConfig (gConfig g) (setPassListPath path)
     return path
+
+getPassListPath :: Config -> Maybe FilePath
+getPassListPath = OC.lookup "passlist path" . optionalConfig
+
+setPassListPath :: FilePath -> Config -> Config
+setPassListPath path config = config
+    { optionalConfig = OC.insert "passlist path" path (optionalConfig config)
+    }
 
 updateConfig :: Var Config -> (Config -> Config) -> IO ()
 updateConfig vc f = varUpdate vc f >> varGet vc >>= saveConfig
@@ -96,7 +130,7 @@ updateConfig vc f = varUpdate vc f >> varGet vc >>= saveConfig
 splitPassListPath :: Maybe FilePath -> (String,String)
 splitPassListPath = maybe ("","") splitFileName
 
-loadFile :: ListView PassListEntry -> String -> IO (Maybe String)
+loadFile :: ListView PassListEntry -> FilePath -> IO (Maybe String)
 loadFile lc filename = fileToEntries filename >>= errHandler
   where
     errHandler (Right entries) = listViewSetItems lc entries >> return Nothing
@@ -105,26 +139,29 @@ loadFile lc filename = fileToEntries filename >>= errHandler
 entryToStrings :: PassListEntry -> [String]
 entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, show z]
 
-configVar :: Frame () -> IO (Var Config)
-configVar f = do
+initConfig :: Frame () -> IO Config
+initConfig f = do
     c <- loadConfig
     case c of
-        Right config -> varCreate config
+        Right config -> return config
         Left ConfigFileNotFound -> do
-            mpass <- passwordDialog f "Please enter a master password:" "Please enter a master password." ""
-            hash <- hashMasterPassword mpass
-            let config = defaultConfig hash
+            hash <- initMasterPassword f
+            let config = Config { masterPasswordHash = hash
+                                , optionalConfig = OC.empty
+                                }
             saveConfig config
-            varCreate config
+            return config
         Left (InvalidConfig fp) ->
             crashWithError f $ "Invalid config file. Please delete " ++ fp
+
+initMasterPassword :: Frame () -> IO String
+initMasterPassword f = do
+    spass <- passwordDialog f "Please enter a master password:" "Please enter a master password." ""
+    case masterPassword spass of
+        Nothing    -> initMasterPassword f
+        Just mpass -> hashMasterPassword mpass
 
 crashWithError :: Frame () -> String -> IO a
 crashWithError f m = do
     errorDialog f "Error" m
     error m
-
-lcEvent :: GUIContext -> EventList -> IO ()
-lcEvent GUICtx{guiSelItem = si} (ListItemSelected i) = varSet si i
-lcEvent GUICtx{guiSelItem = si} ListDeleteAllItems = varSet si (-1)
-lcEvent _ _ = return ()
