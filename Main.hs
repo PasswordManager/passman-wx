@@ -17,10 +17,11 @@ import System.FilePath (splitFileName)
 import Graphics.UI.WX
     ( (.+.), Align(..), Button, Frame, ListView, ListView(..), Prop(..)
     , Size2D(..), Var, Window, activate, button, column, columns, command
-    , errorDialog, fileOpenDialog, fill, frame, hfill, infoDialog, listCtrlEx
-    , listViewCtrl, listViewItems, listViewSetHandler, listViewSetItems
-    , minsize, on, passwordDialog, row, set, start, text, varCreate, varCreate
-    , varGet, varSet, varUpdate, when, widget, windowReLayout, windowSetLayout
+    , errorDialog, fileOpenDialog, fileSaveDialog, fill, frame, hfill
+    , infoDialog, listCtrlEx, listViewCtrl, listViewItems, listViewSetHandler
+    , listViewSetItems, minsize, on, passwordDialog, row, set, start, text
+    , varCreate, varCreate, varGet, varSet, varUpdate, when, widget
+    , windowReLayout, windowSetLayout
     )
 
 import Graphics.UI.WXCore
@@ -33,6 +34,10 @@ data GUI = GUI { gWin          :: Frame ()
                , gListView     :: ListView PassListEntry
                , gGetPassword  :: Button ()
                , gOpenFile     :: Button ()
+               , gSaveFile     :: Button ()
+               , gAddEntry     :: Button ()
+               , gModifyEntry  :: Button ()
+               , gRemoveEntry  :: Button ()
                , gConfig       :: Var Config
                , gSelectedItem :: Var Int
                }
@@ -53,22 +58,55 @@ gui = do
         ]            ] <*> varCreate [] <*> pure entryToStrings
     gGetPassword  <- button gWin [ text := "Get Password" ]
     gOpenFile     <- button gWin [ text := "Open File" ]
+    gSaveFile     <- button gWin [ text := "Save File" ]
+    gAddEntry     <- button gWin [ text := "Add Entry" ]
+    gModifyEntry  <- button gWin [ text := "Modify Entry" ]
+    gRemoveEntry  <- button gWin [ text := "Remove Entry" ]
     gConfig       <- varCreate =<< initConfig gWin
     gSelectedItem <- varCreate (-1)
 
     let g = GUI {..}
 
     set gWin         [ on activate := flip when (windowReLayout gWin) ]
-    set gOpenFile    [ on command := openFile g]
-    set gGetPassword [ on command := getPassword g]
+    set gOpenFile    [ on command := _FileEvent g False]
+    set gSaveFile    [ on command := _FileEvent g True]
+    set gGetPassword [ on command := getPasswordEvent g]
     listViewSetHandler gListView (listViewEvent g)
     windowSetLayout gWin $ column 5 $ map (row 5)
         [ [fill $ minsize (Size 400 100) $ widget $ listViewCtrl gListView]
-        , [hfill $ widget gGetPassword]
-        , [hfill $ widget gOpenFile]
+        , map (hfill . widget) [gGetPassword]
+        , map (hfill . widget) [gOpenFile, gSaveFile]
+        , map (hfill . widget) [gAddEntry, gModifyEntry, gRemoveEntry]
         ]
 
 -- Event handlers
+
+getPasswordEvent :: GUI -> IO ()
+getPasswordEvent g@GUI{..} = do
+    selectedItem <- varGet gSelectedItem
+    if selectedItem < 0 then
+        errorDialog gWin "No item selected" "No item selected"
+    else do
+        entries <- varGet $ listViewItems gListView
+        getPasswordForEntry g (entries !! selectedItem)
+
+_FileEvent :: GUI -> Bool -> IO ()
+_FileEvent g@GUI{..} save = helper =<< passListDialog g save
+  where
+    _File = if save then saveFile else loadFile
+    helper :: Maybe FilePath -> IO ()
+    helper Nothing = return ()
+    helper (Just path) = _File gListView path >>= errHandler
+    errHandler Nothing = return ()
+    errHandler (Just err) = errorDialog' gWin err >> _FileEvent g save
+
+listViewEvent :: GUI -> EventList -> IO ()
+listViewEvent GUI{..} event = case event of
+    ListItemSelected i -> varSet gSelectedItem i
+    ListDeleteAllItems -> varSet gSelectedItem (-1)
+    _                  -> return ()
+
+-- Helper Functions
 
 getPasswordForEntry :: GUI -> PassListEntry -> IO ()
 getPasswordForEntry g@GUI{..} entry = do
@@ -88,43 +126,18 @@ getPasswordForEntry g@GUI{..} entry = do
             setClipboardText ""
         else errorLoop
 
-getPassword :: GUI -> IO ()
-getPassword g@GUI{..} = do
-    selectedItem <- varGet gSelectedItem
-    if selectedItem < 0 then
-        errorDialog gWin "No item selected" "No item selected"
-    else do
-        entries <- varGet $ listViewItems gListView
-        getPasswordForEntry g (entries !! selectedItem)
-
-openFile :: GUI -> IO ()
-openFile g@GUI{..} = helper =<< passListDialog g
-  where
-    helper :: Maybe FilePath -> IO ()
-    helper Nothing = return ()
-    helper (Just path) = loadFile gListView path >>= errHandler
-    errHandler Nothing = return ()
-    errHandler (Just err) = errorDialog gWin "Error" err >> openFile g
-
-listViewEvent :: GUI -> EventList -> IO ()
-listViewEvent GUI{..} event = case event of
-    ListItemSelected i -> varSet gSelectedItem i
-    ListDeleteAllItems -> varSet gSelectedItem (-1)
-    _                  -> return ()
-
--- Helper Functions
-
 setClipboardText :: String -> IO ()
 setClipboardText t = clipboardCreate >>= flip execClipBoardData helper
   where
     helper :: Clipboard () -> IO ()
     helper cl = textDataObjectCreate t >>= clipboardSetData cl >> return ()
 
-passListDialog :: GUI -> IO (Maybe FilePath)
-passListDialog GUI{..} = runMaybeT $ do
+passListDialog :: GUI -> Bool -> IO (Maybe FilePath)
+passListDialog GUI{..} save = runMaybeT $ do
     config <- liftIO $ varGet gConfig
     let (p1,p2) = splitPassListPath $ getPassListPath config
-    path <- MaybeT $ fileOpenDialog gWin True True "Open file..."
+        dialog  = if save then fileSaveDialog else fileOpenDialog
+    path <- MaybeT $ dialog gWin True True "Open file..."
                                             [("Text Files (*.txt)", ["*.txt"])
                                             ,("All Files (*.*)",["*"])] p1 p2
     liftIO $ updateConfig gConfig (setPassListPath path)
@@ -150,6 +163,9 @@ loadFile lc filename = fileToEntries filename >>= errHandler
     errHandler (Right entries) = listViewSetItems lc entries >> return Nothing
     errHandler (Left err) = return $ Just $ show err
 
+saveFile :: ListView PassListEntry -> FilePath -> IO (Maybe String)
+saveFile lc fn = fmap show <$> (varGet (listViewItems lc) >>= entriesToFile fn)
+
 entryToStrings :: PassListEntry -> [String]
 entryToStrings (PassListEntry x y z) = [x, fromMaybe "Max" $ show <$> y, show z]
 
@@ -174,7 +190,6 @@ initMasterPassword f = do
     case masterPassword spass of
         Nothing    -> initMasterPassword f
         Just mpass -> hashMasterPassword mpass
-
 
 passwordDialog' :: Window a -> String -> String -> IO String
 passwordDialog' f s = passwordDialog f (s ++ ":") (s ++ ".")

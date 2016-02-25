@@ -13,7 +13,7 @@ executable passman-wx
   main-is:             Main.hs
 
   build-depends:       base         == 4.*
-                     , passman-core == 0.3.0
+                     , passman-core == 0.3.1
                      , wxcore
                      , wx
                      , filepath
